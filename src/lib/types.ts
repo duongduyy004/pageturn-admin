@@ -29,7 +29,6 @@ export type User = {
 
 export type PublicBook = {
   id: number
-  bookHash: string
   title: string
   author?: string | null
   language?: string | null

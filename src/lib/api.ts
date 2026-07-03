@@ -1,6 +1,8 @@
+import { getSession, setSession } from './sessionStore'
 import type { ApiResponse, AuthResponse, Page, PublicBook, PublicBookDetail, User } from './types'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080'
+const AUTH_PATH_PREFIX = '/api/v1/auth/'
 
 export class ApiError extends Error {
   status: number
@@ -15,7 +17,38 @@ export class ApiError extends Error {
 
 type RequestOptions = RequestInit & { token?: string | null }
 
-async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+let refreshPromise: Promise<string | null> | null = null
+
+async function refreshAccessToken(): Promise<string | null> {
+  const session = getSession()
+  if (!session?.refreshToken) return null
+
+  if (!refreshPromise) {
+    refreshPromise = fetch(`${API_BASE_URL}/api/v1/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken: session.refreshToken }),
+    })
+      .then(async (response) => {
+        if (!response.ok) throw new Error('refresh failed')
+        const body = await response.json()
+        const auth = body.data as AuthResponse
+        setSession({ accessToken: auth.accessToken, refreshToken: auth.refreshToken, user: auth.user })
+        return auth.accessToken
+      })
+      .catch(() => {
+        setSession(null)
+        return null
+      })
+      .finally(() => {
+        refreshPromise = null
+      })
+  }
+
+  return refreshPromise
+}
+
+async function request<T>(path: string, options: RequestOptions = {}, retried = false): Promise<T> {
   const headers = new Headers(options.headers)
   if (!(options.body instanceof FormData) && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json')
@@ -25,6 +58,14 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   }
 
   const response = await fetch(`${API_BASE_URL}${path}`, { ...options, headers })
+
+  if (response.status === 401 && !retried && options.token && !path.startsWith(AUTH_PATH_PREFIX)) {
+    const newToken = await refreshAccessToken()
+    if (newToken) {
+      return request<T>(path, { ...options, token: newToken }, true)
+    }
+  }
+
   const contentType = response.headers.get('content-type') ?? ''
   const body = contentType.includes('application/json') ? await response.json() : null
 
