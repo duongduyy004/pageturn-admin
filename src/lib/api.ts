@@ -1,5 +1,5 @@
 import { getSession, setSession } from './sessionStore'
-import type { ApiResponse, AuthResponse, Page, PublicBook, PublicBookDetail, User } from './types'
+import type { ApiResponse, AuthResponse, BookCategory, BookCategorySummary, Page, PublicBook, PublicBookDetail, User } from './types'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080'
 const AUTH_PATH_PREFIX = '/api/v1/auth/'
@@ -105,4 +105,17 @@ export const api = {
     request<PublicBookDetail>(`/api/v1/admin/store/${id}`, { method: 'PUT', token, body: form }),
   deleteBook: (token: string, id: number) =>
     request<void>(`/api/v1/admin/store/${id}`, { method: 'DELETE', token }),
+
+  listBookCategories: (token: string, query: { page: number; size: number; q?: string; active?: string }) =>
+    request<Page<BookCategory>>(`/api/v1/admin/book-categories?${params(query)}`, { token }),
+  listActiveBookCategories: (token: string) =>
+    request<BookCategorySummary[]>('/api/v1/store/categories', { token }),
+  getBookCategory: (token: string, id: number) =>
+    request<BookCategory>(`/api/v1/admin/book-categories/${id}`, { token }),
+  createBookCategory: (token: string, input: Pick<BookCategory, 'name' | 'description' | 'displayOrder' | 'active'>) =>
+    request<BookCategory>('/api/v1/admin/book-categories', { method: 'POST', token, body: JSON.stringify(input) }),
+  updateBookCategory: (token: string, id: number, input: Partial<Pick<BookCategory, 'name' | 'description' | 'displayOrder' | 'active'>>) =>
+    request<BookCategory>(`/api/v1/admin/book-categories/${id}`, { method: 'PATCH', token, body: JSON.stringify(input) }),
+  deleteBookCategory: (token: string, id: number) =>
+    request<void>(`/api/v1/admin/book-categories/${id}`, { method: 'DELETE', token }),
 }

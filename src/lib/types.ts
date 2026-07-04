@@ -30,11 +30,12 @@ export type User = {
 export type PublicBook = {
   id: number
   title: string
-  author?: string | null
+  authors?: string[] | null
   language?: string | null
   coverUrl?: string | null
   fileFormat: string
   fileSize: number
+  categoryId?: number | null
   category?: string | null
   downloadCount: number
 }
@@ -47,3 +48,18 @@ export type PublicBookDetail = PublicBook & {
   createdAt: string
   updatedAt: string
 }
+
+
+export type BookCategory = {
+  id: number
+  name: string
+  slug: string
+  description?: string | null
+  displayOrder: number
+  active: boolean
+  bookCount: number
+  createdAt: string
+  updatedAt: string
+}
+
+export type BookCategorySummary = Pick<BookCategory, 'id' | 'name' | 'slug' | 'description'>

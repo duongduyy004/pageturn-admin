@@ -1,5 +1,5 @@
 import { Link, Outlet, useRouterState } from '@tanstack/react-router'
-import { BookOpen, LayoutDashboard, LogOut, Users } from 'lucide-react'
+import { BookOpen, LayoutDashboard, LogOut, Tags, Users } from 'lucide-react'
 import { useAuth } from '../lib/auth'
 
 export function Layout() {
@@ -12,31 +12,32 @@ export function Layout() {
 
   if (!user || !isAdmin) {
     return (
-      <main className="gate">
-        <section>
-          <h1>PageTurn Admin</h1>
+      <main className="grid min-h-screen place-items-center bg-linear-to-br from-[#eff4ef] to-[#f8f7f1] p-6">
+        <section className="w-[min(420px,100%)] rounded-lg border border-[#dfe3dc] bg-white p-7 shadow-[0_18px_60px_rgba(16,35,28,.08)]">
+          <h1 className="m-0 text-[30px] font-bold leading-tight tracking-normal text-[#17211b]">PageTurn Admin</h1>
           <p>Sign in with an administrator account to manage catalog books and users.</p>
-          <Link className="button primary" to="/login">Sign in</Link>
+          <Link className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-[#c8d0c8] bg-white px-3.5 py-2.5 text-[#17211b] disabled:cursor-not-allowed disabled:opacity-55 !border-[#1f6f4a] !bg-[#1f6f4a] !text-white" to="/login">Sign in</Link>
         </section>
       </main>
     )
   }
 
   return (
-    <div className="app-shell">
-      <aside className="sidebar">
-        <div className="brand"><BookOpen size={24} /><span>PageTurn Admin</span></div>
-        <nav>
-          <Link to="/" activeProps={{ className: 'active' }}><LayoutDashboard size={18} />Overview</Link>
-          <Link to="/books" activeProps={{ className: 'active' }}><BookOpen size={18} />Books</Link>
-          <Link to="/users" activeProps={{ className: 'active' }}><Users size={18} />Users</Link>
+    <div className="grid min-h-screen grid-cols-[248px_minmax(0,1fr)] max-[1000px]:grid-cols-1">
+      <aside className="flex flex-col gap-6 bg-[#10231c] px-4 py-6 text-[#f7f7ef] max-[1000px]:static">
+        <div className="flex items-center gap-2.5 text-lg font-extrabold"><BookOpen size={24} /><span>PageTurn Admin</span></div>
+        <nav className="grid gap-1.5">
+          <Link className="flex w-full items-center gap-2.5 rounded-lg border-0 bg-transparent px-3 py-[11px] text-[#dfe8de] hover:bg-[#1d3a30] hover:text-white" to="/" activeProps={{ className: "flex w-full items-center gap-2.5 rounded-lg border-0 bg-transparent px-3 py-[11px] text-[#dfe8de] hover:bg-[#1d3a30] hover:text-white !bg-[#1d3a30] !text-white" }}><LayoutDashboard size={18} />Overview</Link>
+          <Link className="flex w-full items-center gap-2.5 rounded-lg border-0 bg-transparent px-3 py-[11px] text-[#dfe8de] hover:bg-[#1d3a30] hover:text-white" to="/books" activeProps={{ className: "flex w-full items-center gap-2.5 rounded-lg border-0 bg-transparent px-3 py-[11px] text-[#dfe8de] hover:bg-[#1d3a30] hover:text-white !bg-[#1d3a30] !text-white" }}><BookOpen size={18} />Books</Link>
+          <Link className="flex w-full items-center gap-2.5 rounded-lg border-0 bg-transparent px-3 py-[11px] text-[#dfe8de] hover:bg-[#1d3a30] hover:text-white" to="/categories" activeProps={{ className: "flex w-full items-center gap-2.5 rounded-lg border-0 bg-transparent px-3 py-[11px] text-[#dfe8de] hover:bg-[#1d3a30] hover:text-white !bg-[#1d3a30] !text-white" }}><Tags size={18} />Categories</Link>
+          <Link className="flex w-full items-center gap-2.5 rounded-lg border-0 bg-transparent px-3 py-[11px] text-[#dfe8de] hover:bg-[#1d3a30] hover:text-white" to="/users" activeProps={{ className: "flex w-full items-center gap-2.5 rounded-lg border-0 bg-transparent px-3 py-[11px] text-[#dfe8de] hover:bg-[#1d3a30] hover:text-white !bg-[#1d3a30] !text-white" }}><Users size={18} />Users</Link>
         </nav>
-        <button className="nav-button" type="button" onClick={signOut}><LogOut size={18} />Sign out</button>
+        <button className="mt-auto flex w-full items-center gap-2.5 rounded-lg border-0 bg-transparent px-3 py-[11px] text-[#dfe8de] hover:bg-[#1d3a30] hover:text-white" type="button" onClick={signOut}><LogOut size={18} />Sign out</button>
       </aside>
-      <div className="workspace">
-        <header className="topbar">
-          <div>
-            <span className="eyebrow">Administrator</span>
+      <div className="min-w-0">
+        <header className="flex h-[72px] items-center justify-between border-b border-[#dfe3dc] bg-white px-7">
+          <div className="grid gap-[3px]">
+            <span className="text-xs font-bold uppercase tracking-normal text-[#66746b]">Administrator</span>
             <strong>{user.displayName}</strong>
           </div>
           <span>{user.email}</span>

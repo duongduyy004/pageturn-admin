@@ -20,18 +20,18 @@ export function DataTable<T>({ data, columns, emptyLabel }: DataTableProps<T>) {
   })
 
   return (
-    <div className="table-wrap">
-      <table>
+    <div className="overflow-auto rounded-lg border border-[#dfe3dc] bg-white">
+      <table className="w-full min-w-[720px] border-collapse">
         <thead>
           {table.getHeaderGroups().map((headerGroup) => (
             <tr key={headerGroup.id}>
               {headerGroup.headers.map((header) => {
                 const sorted = header.column.getIsSorted()
                 return (
-                  <th key={header.id} style={{ width: header.getSize() }}>
+                  <th className="border-b border-[#edf0eb] bg-[#fbfcfa] px-3.5 py-3 text-left align-middle text-[13px] text-[#4f5d54]" key={header.id} style={{ width: header.getSize() }}>
                     {header.isPlaceholder ? null : (
                       <button
-                        className="th-button"
+                        className="inline-flex items-center gap-1.5 border-0 bg-transparent p-0 font-bold text-inherit disabled:cursor-default"
                         type="button"
                         onClick={header.column.getToggleSortingHandler()}
                         disabled={!header.column.getCanSort()}
@@ -50,11 +50,11 @@ export function DataTable<T>({ data, columns, emptyLabel }: DataTableProps<T>) {
           {table.getRowModel().rows.length ? table.getRowModel().rows.map((row) => (
             <tr key={row.id}>
               {row.getVisibleCells().map((cell) => (
-                <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
+                <td className="border-b border-[#edf0eb] px-3.5 py-3 text-left align-middle" key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
               ))}
             </tr>
           )) : (
-            <tr><td className="empty" colSpan={columns.length}>{emptyLabel}</td></tr>
+            <tr><td className="px-3.5 py-7 text-center text-[#66746b]" colSpan={columns.length}>{emptyLabel}</td></tr>
           )}
         </tbody>
       </table>
