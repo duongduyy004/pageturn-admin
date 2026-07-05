@@ -1,10 +1,44 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate, useParams } from '@tanstack/react-router'
 import { Edit3, Trash2 } from 'lucide-react'
+import { useState } from 'react'
 import { BookPreview, formatAuthors } from '../components/BookPreview'
 import { api } from '../lib/api'
 import { useAuth } from '../lib/auth'
 import { formatLanguage } from '../utils/language'
+
+const allowedDescriptionTags = new Set(['A', 'B', 'BR', 'DIV', 'EM', 'I', 'LI', 'OL', 'P', 'SPAN', 'STRONG', 'UL'])
+
+function sanitizeDescriptionHtml(value: string) {
+  const doc = new DOMParser().parseFromString(value, 'text/html')
+  doc.body.querySelectorAll('*').forEach((element) => {
+    if (!allowedDescriptionTags.has(element.tagName)) {
+      element.replaceWith(...Array.from(element.childNodes))
+      return
+    }
+    Array.from(element.attributes).forEach((attribute) => {
+      if (element.tagName === 'A' && attribute.name === 'href' && /^https?:\/\//i.test(attribute.value)) return
+      element.removeAttribute(attribute.name)
+    })
+    if (element.tagName === 'A') {
+      element.setAttribute('target', '_blank')
+      element.setAttribute('rel', 'noreferrer')
+    }
+  })
+  return doc.body.innerHTML
+}
+
+function BookDescription({ value }: { value?: string | null }) {
+  const [expanded, setExpanded] = useState(false)
+  if (!value) return <>-</>
+
+  return (
+    <div className="grid gap-2">
+      <div className={expanded ? "grid gap-2 [&_a]:font-bold [&_a]:text-[#1f6f4a] [&_ol]:m-0 [&_ol]:pl-5 [&_p]:m-0 [&_ul]:m-0 [&_ul]:pl-5" : "grid max-h-28 overflow-hidden gap-2 [&_a]:font-bold [&_a]:text-[#1f6f4a] [&_ol]:m-0 [&_ol]:pl-5 [&_p]:m-0 [&_ul]:m-0 [&_ul]:pl-5"} dangerouslySetInnerHTML={{ __html: sanitizeDescriptionHtml(value) }} />
+      <button className="w-fit border-0 bg-transparent p-0 font-bold text-[#1f6f4a]" type="button" onClick={() => setExpanded((current) => !current)}>{expanded ? 'Collapse' : 'Expand'}</button>
+    </div>
+  )
+}
 
 export function BookDetailPage() {
   const { accessToken } = useAuth()
@@ -47,7 +81,7 @@ export function BookDetailPage() {
             <dl className="grid grid-cols-[92px_minmax(0,1fr)] gap-x-3 gap-y-2.5 [&_dd]:m-0 [&_dd]:break-words [&_dt]:font-bold [&_dt]:text-[#66746b]">
               <dt>Title</dt><dd>{book.data.title}</dd>
               <dt>Authors</dt><dd>{formatAuthors(book.data) || 'Unknown'}</dd>
-              <dt>Description</dt><dd>{book.data.description || '-'}</dd>
+              <dt>Description</dt><dd><BookDescription value={book.data.description} /></dd>
               <dt>Language</dt><dd>{formatLanguage(book.data.language) || '-'}</dd>
               <dt>Category</dt><dd>{book.data.category || 'None'}</dd>
               <dt>Format</dt><dd><span className="inline-flex items-center rounded-full bg-[#edf5ef] px-[9px] py-1 text-xs font-bold text-[#1f6f4a]">{book.data.fileFormat}</span></dd>
