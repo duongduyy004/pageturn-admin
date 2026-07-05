@@ -4,6 +4,7 @@ import { Edit3, Trash2 } from 'lucide-react'
 import { BookPreview, formatAuthors } from '../components/BookPreview'
 import { api } from '../lib/api'
 import { useAuth } from '../lib/auth'
+import { formatLanguage } from '../utils/language'
 
 export function BookDetailPage() {
   const { accessToken } = useAuth()
@@ -47,7 +48,7 @@ export function BookDetailPage() {
               <dt>Title</dt><dd>{book.data.title}</dd>
               <dt>Authors</dt><dd>{formatAuthors(book.data) || 'Unknown'}</dd>
               <dt>Description</dt><dd>{book.data.description || '-'}</dd>
-              <dt>Language</dt><dd>{book.data.language || '-'}</dd>
+              <dt>Language</dt><dd>{formatLanguage(book.data.language) || '-'}</dd>
               <dt>Category</dt><dd>{book.data.category || 'None'}</dd>
               <dt>Format</dt><dd><span className="inline-flex items-center rounded-full bg-[#edf5ef] px-[9px] py-1 text-xs font-bold text-[#1f6f4a]">{book.data.fileFormat}</span></dd>
               <dt>File size</dt><dd>{(book.data.fileSize / 1024 / 1024).toFixed(2)} MB</dd>

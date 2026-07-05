@@ -8,6 +8,7 @@ import { api } from '../lib/api'
 import { useAuth } from '../lib/auth'
 import { extractBookMetadata, type BookMetadataResult, type ExtractedCoverImage } from '../lib/bookMetadata'
 import type { PublicBookDetail } from '../lib/types'
+import { getLanguageCode, languages } from '../utils/language'
 
 type BookForm = {
   title: string
@@ -124,7 +125,7 @@ function fillFormValues(detail: PublicBookDetail): BookForm {
     title: detail.title,
     author: detail.authors?.join(', ') ?? '',
     description: detail.description ?? '',
-    language: detail.language ?? '',
+    language: getLanguageCode(detail.language) || detail.language || '',
     category: detail.category ?? '',
     categoryId: detail.categoryId ? String(detail.categoryId) : '',
     active: detail.active,
@@ -247,8 +248,8 @@ function BookFormPage({ mode }: { mode: 'create' | 'edit' }) {
     setCoverImagePreviewUrl(nextPreviewUrl)
     setCoverPreviewOpen(false)
     setCoverImageFileName('')
-    setValue('coverImage', undefined as unknown as FileList, { shouldDirty: true, shouldTouch: true, shouldValidate: !nextPreviewUrl })
-    if (nextPreviewUrl) clearErrors('coverImage')
+    setValue('coverImage', undefined as unknown as FileList, { shouldDirty: true, shouldTouch: true, shouldValidate: mode === 'edit' && !nextPreviewUrl })
+    if (mode === 'create' || nextPreviewUrl) clearErrors('coverImage')
   }
 
   function fillCoverImageField(coverImage: ExtractedCoverImage) {
@@ -298,7 +299,12 @@ function BookFormPage({ mode }: { mode: 'create' | 'edit' }) {
           }
           return
         }
-        const field = key as keyof Pick<BookForm, 'title' | 'author' | 'description' | 'language' | 'category'>
+        if (key === 'language' && typeof value === 'string') {
+          const language = getLanguageCode(value)
+          if (language) setValue('language', language, { shouldDirty: true, shouldValidate: true })
+          return
+        }
+        const field = key as keyof Pick<BookForm, 'title' | 'author' | 'description' | 'category'>
         if (typeof value === 'string' && value) {
           setValue(field, value, { shouldDirty: true, shouldValidate: true })
         }
@@ -330,10 +336,10 @@ function BookFormPage({ mode }: { mode: 'create' | 'edit' }) {
     onChange: handleBookFileChange,
   })
   const coverImageInput = register('coverImage', {
-    validate: () => Boolean(coverImageInputRef.current?.files?.length || (mode === 'edit' && coverImageMode === 'current' && detail.data?.coverUrl)) || 'Cover image is required',
+    ...(mode === 'edit' ? { validate: () => Boolean(coverImageInputRef.current?.files?.length || (coverImageMode === 'current' && detail.data?.coverUrl)) || 'Cover image is required' } : {}),
     onChange: handleCoverImageChange,
   })
-  const title = mode === 'create' ? 'Create book' : 'Edit book'
+  const title = mode === 'create' ? 'Add new book' : 'Edit book'
 
   return (
     <main className="p-7">
@@ -348,7 +354,7 @@ function BookFormPage({ mode }: { mode: 'create' | 'edit' }) {
           <label className="grid gap-1.5 font-bold text-[#344239] [&_input:not([type=checkbox])]:w-full [&_input:not([type=checkbox])]:rounded-lg [&_input:not([type=checkbox])]:border [&_input:not([type=checkbox])]:border-[#c8d0c8] [&_input:not([type=checkbox])]:bg-white [&_input:not([type=checkbox])]:px-[11px] [&_input:not([type=checkbox])]:py-2.5 [&_input:not([type=checkbox])]:text-[#17211b] [&_select]:w-full [&_select]:rounded-lg [&_select]:border [&_select]:border-[#c8d0c8] [&_select]:bg-white [&_select]:px-[11px] [&_select]:py-2.5 [&_select]:text-[#17211b] [&_textarea]:w-full [&_textarea]:rounded-lg [&_textarea]:border [&_textarea]:border-[#c8d0c8] [&_textarea]:bg-white [&_textarea]:px-[11px] [&_textarea]:py-2.5 [&_textarea]:text-[#17211b] [&_small]:font-semibold [&_small]:text-[#a52828]"><FieldLabel required>Title</FieldLabel><input {...register('title', { required: 'Title is required' })} />{errors.title && <small>{errors.title.message}</small>}</label>
           <label className="grid gap-1.5 font-bold text-[#344239] [&_input:not([type=checkbox])]:w-full [&_input:not([type=checkbox])]:rounded-lg [&_input:not([type=checkbox])]:border [&_input:not([type=checkbox])]:border-[#c8d0c8] [&_input:not([type=checkbox])]:bg-white [&_input:not([type=checkbox])]:px-[11px] [&_input:not([type=checkbox])]:py-2.5 [&_input:not([type=checkbox])]:text-[#17211b] [&_select]:w-full [&_select]:rounded-lg [&_select]:border [&_select]:border-[#c8d0c8] [&_select]:bg-white [&_select]:px-[11px] [&_select]:py-2.5 [&_select]:text-[#17211b] [&_textarea]:w-full [&_textarea]:rounded-lg [&_textarea]:border [&_textarea]:border-[#c8d0c8] [&_textarea]:bg-white [&_textarea]:px-[11px] [&_textarea]:py-2.5 [&_textarea]:text-[#17211b] [&_small]:font-semibold [&_small]:text-[#a52828]"><FieldLabel required>Authors</FieldLabel><input {...register('author', { validate: (value) => parseAuthors(value).length > 0 || 'Authors are required' })} />{errors.author && <small>{errors.author.message}</small>}</label>
           <label className="grid gap-1.5 font-bold text-[#344239] [&_input:not([type=checkbox])]:w-full [&_input:not([type=checkbox])]:rounded-lg [&_input:not([type=checkbox])]:border [&_input:not([type=checkbox])]:border-[#c8d0c8] [&_input:not([type=checkbox])]:bg-white [&_input:not([type=checkbox])]:px-[11px] [&_input:not([type=checkbox])]:py-2.5 [&_input:not([type=checkbox])]:text-[#17211b] [&_select]:w-full [&_select]:rounded-lg [&_select]:border [&_select]:border-[#c8d0c8] [&_select]:bg-white [&_select]:px-[11px] [&_select]:py-2.5 [&_select]:text-[#17211b] [&_textarea]:w-full [&_textarea]:rounded-lg [&_textarea]:border [&_textarea]:border-[#c8d0c8] [&_textarea]:bg-white [&_textarea]:px-[11px] [&_textarea]:py-2.5 [&_textarea]:text-[#17211b] [&_small]:font-semibold [&_small]:text-[#a52828]">Description<textarea rows={4} {...register('description')} /></label>
-          <div className="grid grid-cols-2 gap-[18px] max-[1000px]:grid-cols-1"><label className="grid gap-1.5 font-bold text-[#344239] [&_input:not([type=checkbox])]:w-full [&_input:not([type=checkbox])]:rounded-lg [&_input:not([type=checkbox])]:border [&_input:not([type=checkbox])]:border-[#c8d0c8] [&_input:not([type=checkbox])]:bg-white [&_input:not([type=checkbox])]:px-[11px] [&_input:not([type=checkbox])]:py-2.5 [&_input:not([type=checkbox])]:text-[#17211b] [&_select]:w-full [&_select]:rounded-lg [&_select]:border [&_select]:border-[#c8d0c8] [&_select]:bg-white [&_select]:px-[11px] [&_select]:py-2.5 [&_select]:text-[#17211b] [&_textarea]:w-full [&_textarea]:rounded-lg [&_textarea]:border [&_textarea]:border-[#c8d0c8] [&_textarea]:bg-white [&_textarea]:px-[11px] [&_textarea]:py-2.5 [&_textarea]:text-[#17211b] [&_small]:font-semibold [&_small]:text-[#a52828]"><FieldLabel required>Language</FieldLabel><input {...register('language', { required: 'Language is required' })} />{errors.language && <small>{errors.language.message}</small>}</label><label className="grid gap-1.5 font-bold text-[#344239] [&_input:not([type=checkbox])]:w-full [&_input:not([type=checkbox])]:rounded-lg [&_input:not([type=checkbox])]:border [&_input:not([type=checkbox])]:border-[#c8d0c8] [&_input:not([type=checkbox])]:bg-white [&_input:not([type=checkbox])]:px-[11px] [&_input:not([type=checkbox])]:py-2.5 [&_input:not([type=checkbox])]:text-[#17211b] [&_select]:w-full [&_select]:rounded-lg [&_select]:border [&_select]:border-[#c8d0c8] [&_select]:bg-white [&_select]:px-[11px] [&_select]:py-2.5 [&_select]:text-[#17211b] [&_textarea]:w-full [&_textarea]:rounded-lg [&_textarea]:border [&_textarea]:border-[#c8d0c8] [&_textarea]:bg-white [&_textarea]:px-[11px] [&_textarea]:py-2.5 [&_textarea]:text-[#17211b] [&_small]:font-semibold [&_small]:text-[#a52828]"><FieldLabel required>Category</FieldLabel><select className="w-full rounded-lg border border-[#c8d0c8] bg-white px-[11px] py-2.5 text-[#17211b]" {...register('categoryId', { required: 'Category is required' })}><option value="">Uncategorized</option>{(categories.data ?? []).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>{errors.categoryId && <small>{errors.categoryId.message}</small>}</label></div>
+          <div className="grid grid-cols-2 gap-[18px] max-[1000px]:grid-cols-1"><label className="grid gap-1.5 font-bold text-[#344239] [&_input:not([type=checkbox])]:w-full [&_input:not([type=checkbox])]:rounded-lg [&_input:not([type=checkbox])]:border [&_input:not([type=checkbox])]:border-[#c8d0c8] [&_input:not([type=checkbox])]:bg-white [&_input:not([type=checkbox])]:px-[11px] [&_input:not([type=checkbox])]:py-2.5 [&_input:not([type=checkbox])]:text-[#17211b] [&_select]:w-full [&_select]:rounded-lg [&_select]:border [&_select]:border-[#c8d0c8] [&_select]:bg-white [&_select]:px-[11px] [&_select]:py-2.5 [&_select]:text-[#17211b] [&_textarea]:w-full [&_textarea]:rounded-lg [&_textarea]:border [&_textarea]:border-[#c8d0c8] [&_textarea]:bg-white [&_textarea]:px-[11px] [&_textarea]:py-2.5 [&_textarea]:text-[#17211b] [&_small]:font-semibold [&_small]:text-[#a52828]"><FieldLabel required>Language</FieldLabel><select className="w-full rounded-lg border border-[#c8d0c8] bg-white px-[11px] py-2.5 text-[#17211b]" {...register('language', { required: 'Language is required' })}><option value="">Select language</option>{languages.map((item) => <option key={item.code} value={item.code}>{item.name}{item.native !== item.name ? ` (${item.native})` : ''}</option>)}</select>{errors.language && <small>{errors.language.message}</small>}</label><label className="grid gap-1.5 font-bold text-[#344239] [&_input:not([type=checkbox])]:w-full [&_input:not([type=checkbox])]:rounded-lg [&_input:not([type=checkbox])]:border [&_input:not([type=checkbox])]:border-[#c8d0c8] [&_input:not([type=checkbox])]:bg-white [&_input:not([type=checkbox])]:px-[11px] [&_input:not([type=checkbox])]:py-2.5 [&_input:not([type=checkbox])]:text-[#17211b] [&_select]:w-full [&_select]:rounded-lg [&_select]:border [&_select]:border-[#c8d0c8] [&_select]:bg-white [&_select]:px-[11px] [&_select]:py-2.5 [&_select]:text-[#17211b] [&_textarea]:w-full [&_textarea]:rounded-lg [&_textarea]:border [&_textarea]:border-[#c8d0c8] [&_textarea]:bg-white [&_textarea]:px-[11px] [&_textarea]:py-2.5 [&_textarea]:text-[#17211b] [&_small]:font-semibold [&_small]:text-[#a52828]"><FieldLabel required>Category</FieldLabel><select className="w-full rounded-lg border border-[#c8d0c8] bg-white px-[11px] py-2.5 text-[#17211b]" {...register('categoryId', { required: 'Category is required' })}><option value="">Uncategorized</option>{(categories.data ?? []).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>{errors.categoryId && <small>{errors.categoryId.message}</small>}</label></div>
           <input type="hidden" {...register('category')} />
           {mode === 'edit' ? (
             <div className="grid gap-2.5 [&_small]:font-semibold [&_small]:text-[#a52828]">
@@ -421,7 +427,6 @@ function BookFormPage({ mode }: { mode: 'create' | 'edit' }) {
                 registration={coverImageInput}
                 inputRef={coverImageInputRef}
                 error={errors.coverImage?.message}
-                required
               />
               {coverImagePreviewUrl && (
                 <button className="inline-flex w-fit items-start gap-3 border-0 bg-transparent p-0 [&_img]:aspect-[2/3] [&_img]:w-28 [&_img]:rounded-md [&_img]:border [&_img]:border-[#dfe3dc] [&_img]:bg-[#edf0eb] [&_img]:object-cover hover:[&_img]:border-[#1f6f4a]" type="button" onClick={() => setCoverPreviewOpen(true)} aria-label="Open cover preview">
@@ -433,7 +438,7 @@ function BookFormPage({ mode }: { mode: 'create' | 'edit' }) {
           <label className="flex flex-row items-center gap-[9px] font-bold text-[#344239] [&_input]:w-auto"><input type="checkbox" {...register('active')} />Active listing</label>
           {currentMutation.error && <div className="rounded-lg border border-[#e2b8b8] bg-[#fff1f1] px-3 py-2.5 text-[#922323]">{currentMutation.error.message}</div>}
           <div className="mt-1 flex flex-wrap gap-2.5">
-            <button className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-[#c8d0c8] bg-white px-3.5 py-2.5 text-[#17211b] disabled:cursor-not-allowed disabled:opacity-55 !border-[#1f6f4a] !bg-[#1f6f4a] !text-white" disabled={currentMutation.isPending}>{currentMutation.isPending ? 'Saving...' : mode === 'create' ? 'Create book' : 'Save changes'}</button>
+            <button className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-[#c8d0c8] bg-white px-3.5 py-2.5 text-[#17211b] disabled:cursor-not-allowed disabled:opacity-55 !border-[#1f6f4a] !bg-[#1f6f4a] !text-white" disabled={currentMutation.isPending}>{currentMutation.isPending ? 'Saving...' : mode === 'create' ? 'Add new book' : 'Save changes'}</button>
             <Link className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-[#c8d0c8] bg-white px-3.5 py-2.5 text-[#17211b] disabled:cursor-not-allowed disabled:opacity-55" to="/books">Cancel</Link>
           </div>
         </form>
