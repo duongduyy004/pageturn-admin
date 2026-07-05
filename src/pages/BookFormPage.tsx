@@ -10,6 +10,8 @@ import { extractBookMetadata, type BookMetadataResult, type ExtractedCoverImage 
 import type { PublicBookDetail } from '../lib/types'
 import { getLanguageCode, languages } from '../utils/language'
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080'
+
 type BookForm = {
   title: string
   author: string
@@ -39,6 +41,7 @@ type FilePickerFieldProps = {
   inputRef: MutableRefObject<HTMLInputElement | null>
   error?: string
   required?: boolean
+  hint?: string
 }
 
 type FieldLabelProps = {
@@ -60,8 +63,9 @@ function FileTabs({ value, onChange, hasCurrent }: { value: FileMode; onChange: 
 }
 
 const emptyBook: BookForm = { title: '', author: '', description: '', language: '', category: '', categoryId: '', active: true, file: undefined as unknown as FileList, coverImage: undefined as unknown as FileList }
+const maxBookFileSize = 50 * 1024 * 1024
 
-function FilePickerField({ label, accept, fileName, registration, inputRef, error, required }: FilePickerFieldProps) {
+function FilePickerField({ label, accept, fileName, registration, inputRef, error, required, hint }: FilePickerFieldProps) {
   return (
     <label className="grid gap-1.5 font-bold text-[#344239] [&_input:not([type=checkbox])]:w-full [&_input:not([type=checkbox])]:rounded-lg [&_input:not([type=checkbox])]:border [&_input:not([type=checkbox])]:border-[#c8d0c8] [&_input:not([type=checkbox])]:bg-white [&_input:not([type=checkbox])]:px-[11px] [&_input:not([type=checkbox])]:py-2.5 [&_input:not([type=checkbox])]:text-[#17211b] [&_select]:w-full [&_select]:rounded-lg [&_select]:border [&_select]:border-[#c8d0c8] [&_select]:bg-white [&_select]:px-[11px] [&_select]:py-2.5 [&_select]:text-[#17211b] [&_textarea]:w-full [&_textarea]:rounded-lg [&_textarea]:border [&_textarea]:border-[#c8d0c8] [&_textarea]:bg-white [&_textarea]:px-[11px] [&_textarea]:py-2.5 [&_textarea]:text-[#17211b] [&_small]:font-semibold [&_small]:text-[#a52828]"><FieldLabel required={required}>{label}</FieldLabel>
       <input
@@ -81,6 +85,7 @@ function FilePickerField({ label, accept, fileName, registration, inputRef, erro
         <button className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-[#c8d0c8] bg-white px-3.5 py-2.5 text-[#17211b] disabled:cursor-not-allowed disabled:opacity-55" type="button" onClick={() => inputRef.current?.click()}>Choose file</button>
         <input readOnly value={fileName || 'No file chosen'} />
       </span>
+      {hint && <span className="text-sm font-semibold text-[#66746b]">{hint}</span>}
       {error && <small>{error}</small>}
     </label>
   )
@@ -276,6 +281,29 @@ function BookFormPage({ mode }: { mode: 'create' | 'edit' }) {
     }
   }
 
+  async function extractCurrentPdfCover() {
+    if (!detail.data?.fileUrl) return
+    setMetadataError(null)
+    setMetadataLoading(true)
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/v1/admin/store/${detail.data.id}/download`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      })
+      if (!response.ok) throw new Error(`Unable to read current PDF (${response.status})`)
+      const blob = await response.blob()
+      const fileName = (detail.data.title || 'book').replace(/[^a-z0-9_-]+/gi, '-') + '.pdf'
+      const result = await extractBookMetadata(new File([blob], fileName, { type: 'application/pdf' }))
+      if (!result.coverImage) throw new Error('Unable to extract cover from current PDF.')
+      setCoverImageMode('upload')
+      fillCoverImageField(result.coverImage)
+      setExtractedCoverImage(result.coverImage)
+    } catch (error) {
+      setMetadataError(error instanceof Error ? error.message : 'Unable to extract cover from current PDF.')
+    } finally {
+      setMetadataLoading(false)
+    }
+  }
+
   async function handleBookFileChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
     setMetadataResult(null)
@@ -288,6 +316,14 @@ function BookFormPage({ mode }: { mode: 'create' | 'edit' }) {
     }
     setBookFileMode('upload')
     setBookFileName(file.name)
+    if (file.size > maxBookFileSize) {
+      setMetadataError('Book file must be 50MB or smaller.')
+      return
+    }
+    if (!(/\.(epub|pdf)$/i.test(file.name) || file.type === 'application/epub+zip' || file.type === 'application/pdf')) {
+      setMetadataError('Book file must be EPUB or PDF.')
+      return
+    }
 
     setMetadataLoading(true)
     try {
@@ -332,7 +368,13 @@ function BookFormPage({ mode }: { mode: 'create' | 'edit' }) {
 
   const currentMutation = mode === 'create' ? create : update
   const bookFileInput = register('file', {
-    validate: () => Boolean(bookFileInputRef.current?.files?.length || (mode === 'edit' && bookFileMode === 'current' && detail.data?.fileUrl)) || 'Book file is required',
+    validate: () => {
+      const file = bookFileInputRef.current?.files?.[0]
+      if (!file && mode === 'edit' && bookFileMode === 'current' && detail.data?.fileUrl) return true
+      if (!file) return 'Book file is required'
+      if (file.size > maxBookFileSize) return 'Book file must be 50MB or smaller'
+      return /\.(epub|pdf)$/i.test(file.name) || file.type === 'application/epub+zip' || file.type === 'application/pdf' || 'Book file must be EPUB or PDF'
+    },
     onChange: handleBookFileChange,
   })
   const coverImageInput = register('coverImage', {
@@ -342,7 +384,7 @@ function BookFormPage({ mode }: { mode: 'create' | 'edit' }) {
   const title = mode === 'create' ? 'Add new book' : 'Edit book'
 
   return (
-    <main className="p-7">
+    <main className="w-full max-w-[960px] overflow-x-hidden p-7">
       <div className="mb-[18px] flex items-center justify-between gap-[18px]">
         <div><span className="text-xs font-bold uppercase tracking-normal text-[#66746b]">Catalog</span><h1 className="m-0 text-[30px] font-bold leading-tight tracking-normal text-[#17211b]">{title}</h1></div>
         <div className="flex gap-2.5"><Link className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-[#c8d0c8] bg-white px-3.5 py-2.5 text-[#17211b] disabled:cursor-not-allowed disabled:opacity-55" to="/books">Back to books</Link></div>
@@ -367,11 +409,12 @@ function BookFormPage({ mode }: { mode: 'create' | 'edit' }) {
               ) : (
                 <FilePickerField
                   label="Upload book file"
-                  accept=".epub,.pdf,.txt"
+                  accept=".epub,.pdf"
                   fileName={bookFileName}
                   registration={bookFileInput}
                   inputRef={bookFileInputRef}
                   error={errors.file?.message}
+                  hint="Accepted file types: EPUB, PDF. Maximum size: 50MB"
                 />
               )}
               {bookFileMode === 'current' && errors.file && <small>{errors.file.message}</small>}
@@ -379,12 +422,13 @@ function BookFormPage({ mode }: { mode: 'create' | 'edit' }) {
           ) : (
             <FilePickerField
               label="Book file"
-              accept=".epub,.pdf,.txt"
+              accept=".epub,.pdf"
               fileName={bookFileName}
               registration={bookFileInput}
               inputRef={bookFileInputRef}
               error={errors.file?.message}
               required
+              hint="Accepted file types: EPUB, PDF. Maximum size: 50MB"
             />
           )}
           {mode === 'edit' ? (
@@ -398,6 +442,7 @@ function BookFormPage({ mode }: { mode: 'create' | 'edit' }) {
                       <img src={detail.data.coverUrl} alt="Current cover preview" />
                     </button>
                   ) : <span className="text-[#66746b]">No current cover image is available.</span>}
+                  {detail.data?.fileFormat?.toLowerCase() === 'pdf' && detail.data.fileUrl && <button className="inline-flex w-fit min-h-10 items-center justify-center gap-2 rounded-lg border border-[#c8d0c8] bg-white px-3.5 py-2.5 text-[#17211b] disabled:cursor-not-allowed disabled:opacity-55" type="button" disabled={metadataLoading} onClick={extractCurrentPdfCover}>{metadataLoading ? 'Extracting cover...' : 'Use first PDF page as cover'}</button>}
                 </div>
               ) : (
                 <>
@@ -409,6 +454,7 @@ function BookFormPage({ mode }: { mode: 'create' | 'edit' }) {
                     inputRef={coverImageInputRef}
                     error={errors.coverImage?.message}
                   />
+                  {detail.data?.fileFormat?.toLowerCase() === 'pdf' && detail.data.fileUrl && <button className="inline-flex w-fit min-h-10 items-center justify-center gap-2 rounded-lg border border-[#c8d0c8] bg-white px-3.5 py-2.5 text-[#17211b] disabled:cursor-not-allowed disabled:opacity-55" type="button" disabled={metadataLoading} onClick={extractCurrentPdfCover}>{metadataLoading ? 'Extracting cover...' : 'Use first PDF page as cover'}</button>}
                   {coverImagePreviewUrl && (
                     <button className="inline-flex w-fit items-start gap-3 border-0 bg-transparent p-0 [&_img]:aspect-[2/3] [&_img]:w-28 [&_img]:rounded-md [&_img]:border [&_img]:border-[#dfe3dc] [&_img]:bg-[#edf0eb] [&_img]:object-cover hover:[&_img]:border-[#1f6f4a]" type="button" onClick={() => setCoverPreviewOpen(true)} aria-label="Open cover preview">
                       <img src={coverImagePreviewUrl} alt="Cover preview" />

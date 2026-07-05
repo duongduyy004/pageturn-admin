@@ -32,7 +32,8 @@ export async function extractBookMetadata(file: File): Promise<BookMetadataResul
     return withMissingFields('epub', result.metadata, undefined, result.coverImage)
   }
   if (extension === 'pdf' || file.type === 'application/pdf') {
-    return withMissingFields('pdf', await extractPdfMetadata(file))
+    const result = await extractPdfMetadata(file)
+    return withMissingFields('pdf', result.metadata, undefined, result.coverImage)
   }
 
   return withMissingFields('unknown', {}, 'Metadata extraction supports EPUB and PDF files.')
@@ -151,7 +152,72 @@ async function extractEpubCover(
   }
 }
 
-async function extractPdfMetadata(file: File): Promise<BookMetadata> {
+async function extractPdfMetadata(file: File): Promise<{ metadata: BookMetadata; coverImage?: ExtractedCoverImage }> {
+  const [pdfjsResult, rawMetadata] = await Promise.all([
+    extractPdfJsMetadata(file).catch(() => ({ metadata: {} as BookMetadata, coverImage: undefined as ExtractedCoverImage | undefined })),
+    extractRawPdfMetadata(file),
+  ])
+
+  return {
+    metadata: {
+      title: pdfjsResult.metadata.title || rawMetadata.title,
+      author: pdfjsResult.metadata.author || rawMetadata.author,
+      description: pdfjsResult.metadata.description || rawMetadata.description,
+      category: pdfjsResult.metadata.category || rawMetadata.category,
+      language: pdfjsResult.metadata.language || rawMetadata.language,
+    },
+    coverImage: pdfjsResult.coverImage,
+  }
+}
+
+async function extractPdfJsMetadata(file: File): Promise<{ metadata: BookMetadata; coverImage?: ExtractedCoverImage }> {
+  const pdfjs = await import('pdfjs-dist')
+  pdfjs.GlobalWorkerOptions.workerSrc ||= new URL('pdfjs-dist/build/pdf.worker.mjs', import.meta.url).toString()
+  const buffer = await file.arrayBuffer()
+  const document = await pdfjs.getDocument({ data: new Uint8Array(buffer) }).promise
+  const result = await document.getMetadata()
+  const coverImage = await renderPdfFirstPageCover(document, file.name)
+  await document.destroy()
+
+  const info = result.info as Record<string, unknown>
+  const xmp = result.metadata
+  return {
+    metadata: {
+      title: readPdfJsInfoField(info, 'Title') || readPdfJsMetadataField(xmp, 'dc:title'),
+      author: readPdfJsInfoField(info, 'Author') || readPdfJsMetadataField(xmp, 'dc:creator') || readPdfJsInfoField(info, 'Creator'),
+      description: readPdfJsInfoField(info, 'Subject') || readPdfJsMetadataField(xmp, 'dc:description'),
+      category: readPdfJsInfoField(info, 'Keywords') || readPdfJsMetadataField(xmp, 'pdf:Keywords'),
+      language: readPdfJsMetadataField(xmp, 'dc:language'),
+    },
+    coverImage,
+  }
+}
+
+async function renderPdfFirstPageCover(document: { getPage: (pageNumber: number) => Promise<any> }, fileName: string): Promise<ExtractedCoverImage | undefined> {
+  const page = await document.getPage(1)
+  const viewport = page.getViewport({ scale: 1 })
+  const targetWidth = 600
+  const scale = Math.min(targetWidth / viewport.width, 2)
+  const scaledViewport = page.getViewport({ scale })
+  const canvas = window.document.createElement('canvas')
+  const context = canvas.getContext('2d')
+  if (!context) return undefined
+
+  canvas.width = Math.ceil(scaledViewport.width)
+  canvas.height = Math.ceil(scaledViewport.height)
+  await page.render({ canvasContext: context, viewport: scaledViewport }).promise
+
+  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.9))
+  if (!blob) return undefined
+
+  const baseName = fileName.replace(/\.[^.]+$/, '').replace(/[^a-z0-9_-]+/gi, '-').replace(/^-|-$/g, '') || 'cover'
+  return {
+    file: new File([blob], baseName + '-cover.jpg', { type: 'image/jpeg' }),
+    path: 'page-1',
+  }
+}
+
+async function extractRawPdfMetadata(file: File): Promise<BookMetadata> {
   const sampleBytes = 1024 * 1024
   const firstChunk = await file.slice(0, sampleBytes).arrayBuffer()
   const lastChunk = file.size > sampleBytes
@@ -161,11 +227,20 @@ async function extractPdfMetadata(file: File): Promise<BookMetadata> {
 
   return {
     title: readPdfInfoField(text, 'Title') || readXmpTag(text, 'dc:title'),
-    author: readPdfInfoField(text, 'Author') || readXmpTag(text, 'dc:creator'),
+    author: readPdfInfoField(text, 'Author') || readXmpTag(text, 'dc:creator') || readPdfInfoField(text, 'Creator'),
     description: readPdfInfoField(text, 'Subject') || readXmpTag(text, 'dc:description'),
     category: readPdfInfoField(text, 'Keywords') || readXmpTag(text, 'pdf:Keywords'),
     language: readXmpTag(text, 'dc:language'),
   }
+}
+
+function readPdfJsInfoField(info: Record<string, unknown>, key: string) {
+  const value = info[key]
+  return typeof value === 'string' ? value : undefined
+}
+
+function readPdfJsMetadataField(metadata: { get: (name: string) => string | null } | null, key: string) {
+  return metadata?.get(key) ?? undefined
 }
 
 type ZipEntry = {

@@ -37,7 +37,6 @@ export type PublicBook = {
   fileSize: number
   categoryId?: number | null
   category?: string | null
-  downloadCount: number
 }
 
 export type PublicBookDetail = PublicBook & {

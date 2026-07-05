@@ -11,6 +11,7 @@
     "@tanstack/react-table": "latest",
     "epubjs": "^0.3.93",
     "lucide-react": "latest",
+    "pdfjs-dist": "^5.6.205",
     "react": "latest",
     "react-dom": "latest",
     "react-hook-form": "latest"

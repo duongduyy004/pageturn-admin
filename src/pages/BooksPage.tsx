@@ -33,7 +33,6 @@ export function BooksPage() {
     { id: 'authors', header: 'Authors', cell: ({ row }) => formatAuthors(row.original) || 'Unknown' },
     { accessorKey: 'category', header: 'Category', cell: (info) => info.getValue<string>() || 'None' },
     { accessorKey: 'fileFormat', header: 'Format', cell: (info) => <span className="inline-flex items-center rounded-full bg-[#edf5ef] px-[9px] py-1 text-xs font-bold text-[#1f6f4a]">{info.getValue<string>()}</span> },
-    { accessorKey: 'downloadCount', header: 'Downloads' },
     {
       id: 'actions',
       header: '',

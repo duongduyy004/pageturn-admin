@@ -6,7 +6,7 @@ import { AuthProvider } from './lib/auth'
 import { router } from './router'
 import './styles.css'
 
-document.body.className = 'min-w-[320px] min-h-screen bg-[#f5f6f3] font-sans text-[#17211b] antialiased'
+document.body.className = 'min-w-[320px] min-h-screen overflow-x-hidden bg-[#f5f6f3] font-sans text-[#17211b] antialiased'
 
 const queryClient = new QueryClient({
   defaultOptions: {

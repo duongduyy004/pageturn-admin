@@ -86,7 +86,6 @@ export function BookDetailPage() {
               <dt>Category</dt><dd>{book.data.category || 'None'}</dd>
               <dt>Format</dt><dd><span className="inline-flex items-center rounded-full bg-[#edf5ef] px-[9px] py-1 text-xs font-bold text-[#1f6f4a]">{book.data.fileFormat}</span></dd>
               <dt>File size</dt><dd>{(book.data.fileSize / 1024 / 1024).toFixed(2)} MB</dd>
-              <dt>Downloads</dt><dd>{book.data.downloadCount}</dd>
               <dt>Status</dt><dd><span className={book.data.active ? "inline-flex items-center rounded-full bg-[#e8f6ed] px-[9px] py-1 text-xs font-bold text-[#1d7d44]" : "inline-flex items-center rounded-full bg-[#f7e9e9] px-[9px] py-1 text-xs font-bold text-[#9d2f2f]"}>{book.data.active ? 'Active' : 'Inactive'}</span></dd>
               <dt>Created</dt><dd>{new Date(book.data.createdAt).toLocaleString()}</dd>
               <dt>Updated</dt><dd>{new Date(book.data.updatedAt).toLocaleString()}</dd>
