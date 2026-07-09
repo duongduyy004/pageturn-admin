@@ -14,7 +14,7 @@ export function Layout() {
     return (
       <main className="grid min-h-screen place-items-center bg-linear-to-br from-[#eff4ef] to-[#f8f7f1] p-6">
         <section className="w-[min(420px,100%)] rounded-lg border border-[#dfe3dc] bg-white p-7 shadow-[0_18px_60px_rgba(16,35,28,.08)]">
-          <h1 className="m-0 text-[30px] font-bold leading-tight tracking-normal text-[#17211b]">PageTurn Admin</h1>
+          <h1 className="m-0 text-[30px] font-bold leading-tight tracking-normal text-[#17211b]">Libra Admin</h1>
           <p>Sign in with an administrator account to manage catalog books and users.</p>
           <Link className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-[#c8d0c8] bg-white px-3.5 py-2.5 text-[#17211b] disabled:cursor-not-allowed disabled:opacity-55 !border-[#1f6f4a] !bg-[#1f6f4a] !text-white" to="/login">Sign in</Link>
         </section>
@@ -25,7 +25,7 @@ export function Layout() {
   return (
     <div className="min-h-screen pl-[248px] max-[1000px]:pl-0">
       <aside className="fixed inset-y-0 left-0 z-30 flex w-[248px] flex-col gap-6 overflow-y-auto bg-[#10231c] px-4 py-6 text-[#f7f7ef] max-[1000px]:static max-[1000px]:h-auto max-[1000px]:w-auto">
-        <div className="flex items-center gap-2.5 text-lg font-extrabold"><BookOpen size={24} /><span>PageTurn Admin</span></div>
+        <div className="flex items-center gap-2.5 text-lg font-extrabold"><img src="/libra_logo_icon_only.png" alt="Libra" className="h-8 w-8 object-contain" /><span>Libra Admin</span></div>
         <nav className="grid gap-1.5">
           <Link className="flex w-full items-center gap-2.5 rounded-lg border-0 bg-transparent px-3 py-[11px] text-[#dfe8de] hover:bg-[#1d3a30] hover:text-white" to="/" activeProps={{ className: "flex w-full items-center gap-2.5 rounded-lg border-0 bg-transparent px-3 py-[11px] text-[#dfe8de] hover:bg-[#1d3a30] hover:text-white !bg-[#1d3a30] !text-white" }}><LayoutDashboard size={18} />Overview</Link>
           <Link className="flex w-full items-center gap-2.5 rounded-lg border-0 bg-transparent px-3 py-[11px] text-[#dfe8de] hover:bg-[#1d3a30] hover:text-white" to="/books" activeProps={{ className: "flex w-full items-center gap-2.5 rounded-lg border-0 bg-transparent px-3 py-[11px] text-[#dfe8de] hover:bg-[#1d3a30] hover:text-white !bg-[#1d3a30] !text-white" }}><BookOpen size={18} />Books</Link>
